@@ -1,5 +1,6 @@
 {
   "name": "Halo!",
   "description": "一款极致简约、科技感与艺术感并存的苹果美学级锻炼计时器。主界面仅聚焦纯净呼吸圆环与核心数字，所有参数配置、预设清单、历史记录均收拢于轻量弹窗，支持全功能智能语音免手操作与精准TTS实时播报。",
-  "Overwrite":true,
-  "TargetFile":
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -121,6 +121,7 @@ export default function App() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTickRef = useRef<number>(0);
   const speechActiveRef = useRef<boolean>(false);
+  const isSpeakingRef = useRef<boolean>(false);
   const lastCommandTimeRef = useRef<number>(0); // Refractory period tracker
 
   // Speech Recognition instance ref
@@ -192,25 +193,49 @@ export default function App() {
     try {
       window.speechSynthesis.cancel();
 
+      // Temporarily halt speech recognition on iOS/Safari so they don't block each other
+      if (recognitionRef.current && voiceControlEnabled) {
+        try {
+          recognitionRef.current.abort(); // Clear current session
+        } catch (e) {}
+      }
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "zh-CN";
       utterance.rate = 1.1; // iOS athletic dynamic pace
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
 
+      const resumeASR = () => {
+        speechActiveRef.current = false;
+        isSpeakingRef.current = false;
+        // Delayed restart to avoid catching the trailing echo of TTS audio
+        setTimeout(() => {
+          if (shouldListenRef.current && voiceControlEnabled && !isSpeakingRef.current) {
+            try {
+              recognitionRef.current?.start();
+            } catch (err) {
+              // Already running
+            }
+          }
+        }, 400);
+      };
+
       utterance.onstart = () => {
         speechActiveRef.current = true;
+        isSpeakingRef.current = true;
       };
       utterance.onend = () => {
-        speechActiveRef.current = false;
+        resumeASR();
       };
       utterance.onerror = () => {
-        speechActiveRef.current = false;
+        resumeASR();
       };
 
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn("Speech Synthesis Error:", e);
+      isSpeakingRef.current = false;
     }
   };
 
@@ -224,7 +249,11 @@ export default function App() {
 
     try {
       const rec = new SpeechRecognition();
-      rec.continuous = true;
+      
+      // Detection: iOS/Safari is historically unstable with "continuous = true"
+      // Setting continuous to false on mobile simulates continuous via our onend auto-restart loop!
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      rec.continuous = !isMobile;
       rec.interimResults = true;
       rec.lang = "zh-CN";
 
@@ -260,13 +289,18 @@ export default function App() {
       };
 
       rec.onend = () => {
-        if (shouldListenRef.current && voiceControlEnabled) {
-          try {
-            recognitionRef.current?.start();
-          } catch (err) {
-            // Already running
-          }
-        } else {
+        // If system is speaking via TTS, don't restart here (let the TTS onend handle the restart)
+        if (shouldListenRef.current && voiceControlEnabled && !isSpeakingRef.current) {
+          setTimeout(() => {
+            try {
+              if (shouldListenRef.current && voiceControlEnabled && !isSpeakingRef.current) {
+                recognitionRef.current?.start();
+              }
+            } catch (err) {
+              // Already listening or suppressed
+            }
+          }, 350); // Small cooldown allows physical device microphone hardware to reset cleanly
+        } else if (!voiceControlEnabled) {
           setRecognitionStatus("inactive");
         }
       };
@@ -644,8 +678,14 @@ export default function App() {
           </div>
           <div>
             <span className="text-[9px] font-bold text-[#8E8E93] tracking-widest uppercase hidden sm:block">VOICE HIIT TIMER</span>
-            <h1 className="text-xl sm:text-2xl font-black text-[#1C1C1E] tracking-tight sm:-mt-1" id="header-app-name">
+            <h1 className="text-xl sm:text-2xl font-black text-[#1C1C1E] tracking-tight sm:-mt-1 flex items-center gap-2" id="header-app-name">
               Halo!
+              {voiceControlEnabled && (
+                <span className="relative flex h-2.5 w-2.5" title="智能语音控制运行中">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34C759] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#34C759]"></span>
+                </span>
+              )}
             </h1>
           </div>
         </div>
@@ -673,20 +713,17 @@ export default function App() {
           {/* iOS mic status controller */}
           <button
             onClick={() => setVoiceControlEnabled(!voiceControlEnabled)}
-            className={`h-10 w-10 sm:w-auto sm:px-3.5 rounded-full flex items-center justify-center sm:gap-2 border transition-all duration-250 shrink-0 ${
-              voiceControlEnabled
-                ? "bg-[#34C759] text-white border-[#34C759] shadow-[0_4px_12px_rgba(52,199,89,0.25)]"
-                : "bg-white text-[#1C1C1E] border-[#E5E5EA] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-            }`}
+            className={`h-10 w-10 sm:w-auto sm:px-3.5 rounded-full flex items-center justify-center sm:gap-2 border transition-all duration-250 shrink-0 bg-white text-[#1C1C1E] border-[#E5E5EA] shadow-[0_2px_8px_rgba(0,0,0,0.04)]`}
             id="asr-microphone-switch"
+            title={voiceControlEnabled ? "关闭语音控制" : "开启语音控制"}
           >
             {voiceControlEnabled ? (
               <>
                 <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34C759] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#34C759]"></span>
                 </span>
-                <span className="text-xs font-bold tracking-tight hidden sm:inline whitespace-nowrap">智能指令开</span>
+                <span className="text-xs font-bold text-[#1C1C1E] tracking-tight hidden sm:inline whitespace-nowrap">智能口令开</span>
               </>
             ) : (
               <>
@@ -750,55 +787,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Real-time Voice Translator Bubble */}
-        {voiceControlEnabled && (
-          <div className="w-full max-w-md bg-white border border-[#E5E5EA] rounded-[22px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.03)] mb-4 flex flex-col gap-3 transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-0.5 items-center justify-center">
-                  <span className="w-0.75 h-4 bg-[#007AFF] rounded-full animate-[pulse_1s_infinite_100ms]" />
-                  <span className="w-0.75 h-6 bg-[#34C759] rounded-full animate-[pulse_1s_infinite_300ms]" />
-                  <span className="w-0.75 h-5 bg-[#FF9500] rounded-full animate-[pulse_1s_infinite_200ms]" />
-                  <span className="w-0.75 h-3 bg-[#FF2D55] rounded-full animate-[pulse_1s_infinite_400ms]" />
-                </div>
-                <span className="text-xs font-bold text-[#1C1C1E]">
-                  Siri 式极速语音聆听中...
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  setIsSettingsOpen(true);
-                  setActiveTab("presets");
-                  setShowVoiceGuide(true);
-                }}
-                className="text-[11px] font-bold text-[#007AFF] hover:underline"
-              >
-                口令字典
-              </button>
-            </div>
-
-            {/* Display parsed transcript dynamically */}
-            <div className="bg-[#F2F2F7] rounded-[14px] p-3 flex items-center justify-between gap-3 border border-[#E5E5EA]/50">
-              <div className="flex items-center gap-2 min-w-0">
-                <MessageSquare className="h-3.5 w-3.5 text-[#8E8E93] shrink-0" />
-                <span className="text-xs font-medium text-[#2C2C2E] truncate font-mono">
-                  {lastRecognizedCommand ? (
-                    <>
-                      刚才听到: <strong className="text-[#007AFF] font-bold">&quot;{lastRecognizedCommand}&quot;</strong>
-                    </>
-                  ) : (
-                    <span className="text-[#8E8E93] italic">说出 “开始” 或 “暂停” 或 “下一组” 试试</span>
-                  )}
-                </span>
-              </div>
-
-              {/* Status flag */}
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-[#8E8E93] border border-[#E5E5EA] shrink-0">
-                {recognitionStatus === "listening" ? "在线" : "就绪"}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Real-time Voice feedback replaced by ambient indicators */}
 
         {/* 3. MAIN WORKOUT CENTRAL STAGE */}
         <div className="w-full max-w-md flex flex-col justify-center items-center py-2" id="halo-timer-stage">
