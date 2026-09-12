@@ -1,0 +1,10 @@
+{
+  "name": "Minimalist Workout Timer",
+  "description": "一款极致简约且实用的锻炼和休息计时器。支持自动休息间隔、总时长/组数统计、语音合成播报（TTS）、倒计时声音提醒，以及免手操作的智能语音控制（支持“开始”、“暂停”、“下一组”等语音指令）。",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
