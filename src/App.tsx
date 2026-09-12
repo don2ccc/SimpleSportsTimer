@@ -88,9 +88,10 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [phaseTotalDuration, setPhaseTotalDuration] = useState<number>(0);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const [sessionTotalTime, setSessionTotalTime] = useState<number>(0); // accumulated active seconds
+  const [sessionTotalTime, setSessionTotalTime] = useState<number>(0); // active seconds
 
   // Settings & Toggles
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [voiceControlEnabled, setVoiceControlEnabled] = useState<boolean>(false);
   const [selectedPreset, setSelectedPreset] = useState<string>("自定义");
@@ -120,7 +121,7 @@ export default function App() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTickRef = useRef<number>(0);
   const speechActiveRef = useRef<boolean>(false);
-  const lastCommandTimeRef = useRef<number>(0); // Refractory period tracker for voice control
+  const lastCommandTimeRef = useRef<number>(0); // Refractory period tracker
 
   // Speech Recognition instance ref
   const recognitionRef = useRef<any>(null);
@@ -136,7 +137,6 @@ export default function App() {
 
   // Check if speech is blocked due to iframe constraints
   useEffect(() => {
-    // Web Speech API is often blocked in sandboxed iframes unless explicitly granted
     try {
       const inIframe = window.self !== window.top;
       const isDismissed = localStorage.getItem("dismissed_sandbox_warning") === "true";
@@ -225,7 +225,7 @@ export default function App() {
     try {
       const rec = new SpeechRecognition();
       rec.continuous = true;
-      rec.interimResults = true; // CRITICAL: Receive real-time interim chunks for zero-latency commands
+      rec.interimResults = true;
       rec.lang = "zh-CN";
 
       rec.onstart = () => {
@@ -256,12 +256,10 @@ export default function App() {
         console.warn("Speech recognition error:", event.error);
         if (event.error === "not-allowed" || event.error === "service-not-allowed") {
           setRecognitionStatus("error");
-          // If in iframe, we strongly suggest opening in a new tab
         }
       };
 
       rec.onend = () => {
-        // Continuous restart to keep microphone listening active during physical workout
         if (shouldListenRef.current && voiceControlEnabled) {
           try {
             recognitionRef.current?.start();
@@ -313,7 +311,7 @@ export default function App() {
     if (!cleanCmd) return;
 
     const now = Date.now();
-    // 1.2s refractory period to prevent trailing echo repeats
+    // 1.2s refractory period
     if (now - lastCommandTimeRef.current < 1200) {
       return;
     }
@@ -351,14 +349,13 @@ export default function App() {
     }
   };
 
-  // Simulate command utility (for iframes & direct preview click testing)
+  // Simulate command utility
   const simulateCommand = (cmdText: string) => {
     setLastRecognizedCommand(`(模拟) "${cmdText}"`);
     handleVoiceCommand(cmdText);
   };
 
   // --- CORE TIMER MANAGEMENT ---
-
   const clearActiveTimer = () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -498,7 +495,7 @@ export default function App() {
           }
 
           if (newVal === 0) {
-            playBeep(1440, 0.25, "sine"); // Double pitch cue for state change
+            playBeep(1440, 0.25, "sine");
             clearActiveTimer();
 
             setTimeout(() => {
@@ -601,7 +598,7 @@ export default function App() {
           accentColor: "text-[#34C759] bg-[#34C759]/10",
           ringColor: "text-[#34C759]",
           badgeColor: "bg-[#34C759] text-white",
-          labelText: "呼吸休息",
+          labelText: "充分休息",
           trackColor: "stroke-[#34C759]/10",
           themeTint: "#34C759"
         };
@@ -611,19 +608,19 @@ export default function App() {
           accentColor: "text-[#FF2D55] bg-[#FF2D55]/10",
           ringColor: "text-[#FF2D55]",
           badgeColor: "bg-[#FF2D55] text-white",
-          labelText: "训练圆满完成",
+          labelText: "完美通关",
           trackColor: "stroke-[#FF2D55]/10",
           themeTint: "#FF2D55"
         };
       default:
         return {
-          bg: "bg-slate-50 text-slate-800 border-slate-100",
-          accentColor: "text-slate-500 bg-slate-100",
-          ringColor: "text-[#007AFF]",
-          badgeColor: "bg-slate-600 text-white",
-          labelText: "待机准备",
-          trackColor: "stroke-slate-100",
-          themeTint: "#007AFF"
+          bg: "bg-[#8E8E93]/5 text-[#8E8E93] border-[#8E8E93]/10",
+          accentColor: "text-[#8E8E93] bg-[#8E8E93]/10",
+          ringColor: "text-[#8E8E93]/30",
+          badgeColor: "bg-[#8E8E93] text-white",
+          labelText: "自律等待",
+          trackColor: "stroke-[#8E8E93]/10",
+          themeTint: "#8E8E93"
         };
     }
   };
@@ -646,9 +643,9 @@ export default function App() {
             <Flame className="h-5.5 w-5.5" strokeWidth={2} />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-[#8E8E93] tracking-widest uppercase block">FITNESS TIMER</span>
-            <h1 className="text-xl font-extrabold text-[#1C1C1E] tracking-tight -mt-0.5" id="header-app-name">
-              简约锻炼计时器
+            <span className="text-[10px] font-bold text-[#8E8E93] tracking-widest uppercase block">VOICE HIIT TIMER</span>
+            <h1 className="text-2xl font-black text-[#1C1C1E] tracking-tight -mt-1" id="header-app-name">
+              Halo!
             </h1>
           </div>
         </div>
@@ -676,18 +673,18 @@ export default function App() {
           {/* iOS mic status controller */}
           <button
             onClick={() => setVoiceControlEnabled(!voiceControlEnabled)}
-            className={`h-10 px-4 rounded-full flex items-center gap-2 border transition-all duration-250 ${
+            className={`h-10 px-3.5 rounded-full flex items-center gap-2 border transition-all duration-250 ${
               voiceControlEnabled
-                ? "bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.25)]"
+                ? "bg-[#34C759] text-white border-[#34C759] shadow-[0_4px_12px_rgba(52,199,89,0.25)]"
                 : "bg-white text-[#1C1C1E] border-[#E5E5EA] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
             }`}
             id="asr-microphone-switch"
           >
             {voiceControlEnabled ? (
               <>
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                 </span>
                 <span className="text-xs font-bold tracking-tight">智能指令开</span>
               </>
@@ -698,21 +695,32 @@ export default function App() {
               </>
             )}
           </button>
+
+          {/* Config Settings trigger button */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="h-10 px-4 rounded-full flex items-center gap-1.5 border bg-white hover:bg-[#F2F2F7] text-[#1C1C1E] border-[#E5E5EA] transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:scale-95 font-bold text-xs shrink-0"
+            id="open-configuration-btn"
+          >
+            <Settings className="h-4 w-4 text-[#007AFF]" />
+            <span>配置参数</span>
+          </button>
         </div>
       </header>
 
-      {/* 2. IFRAME MICROPHONE ACCESS GUIDES & VOICE RECOGNITION LIVE TRANSLATOR */}
-      <div className="w-full max-w-4xl px-5 mt-4">
-        {/* If user is using sandboxed preview iframe, show helpful warning to open in tab */}
+      {/* 2. BODY SECTION (IFRAME MICROPHONE ACCESS GUIDES & VOICE RECOGNITION LIVE TRANSLATOR) */}
+      <div className="w-full max-w-4xl px-5 mt-4 flex-1 flex flex-col justify-center items-center">
+        
+        {/* Sandbox warning */}
         {isSpeechBlockedInIFrame && (
-          <div className="bg-white border border-[#FF9500]/20 rounded-[20px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative pr-10 sm:pr-4">
+          <div className="w-full max-w-md bg-white border border-[#FF9500]/20 rounded-[20px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative pr-10 sm:pr-4">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-[#FF9500]/10 rounded-xl text-[#FF9500] shrink-0 mt-0.5">
                 <Info className="h-4.5 w-4.5" />
               </div>
               <div className="text-xs text-[#2C2C2E] leading-relaxed">
                 <strong className="text-[#FF9500] font-bold block mb-0.5">浏览器沙盒安全提示：</strong>
-                锻炼APP处于预览框架中，麦克风录音权限可能会被浏览器限制。建议点击右侧按钮在新窗口独立运行，即可完美享受免提语音指令控制！
+                应用处于预览框架中，麦克风可能会受限。建议在新窗口中运行，完美享受免提语音控制！
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
@@ -720,11 +728,11 @@ export default function App() {
                 href={window.location.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3.5 py-2 rounded-xl bg-[#007AFF] hover:bg-[#0072E3] text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-[0_3px_8px_rgba(0,122,255,0.2)]"
+                className="px-3 py-1.5 rounded-xl bg-[#007AFF] hover:bg-[#0072E3] text-white text-[11px] font-bold flex items-center gap-1 shrink-0 transition-all shadow-[0_3px_8px_rgba(0,122,255,0.2)]"
                 id="new-window-link"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
-                <span>新窗口完美运行</span>
+                <ExternalLink className="h-3 w-3" />
+                <span>运行</span>
               </a>
               <button
                 onClick={() => {
@@ -733,7 +741,7 @@ export default function App() {
                   } catch (e) {}
                   setIsSpeechBlockedInIFrame(false);
                 }}
-                className="p-1.5 hover:bg-[#F2F2F7] rounded-lg text-[#8E8E93] hover:text-[#1C1C1E] transition-colors"
+                className="p-1 hover:bg-[#F2F2F7] rounded-lg text-[#8E8E93] hover:text-[#1C1C1E] transition-colors"
                 title="不再提示"
               >
                 <X className="h-4 w-4" />
@@ -742,9 +750,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Real-time Voice Translator Bubble resembling iOS Siri Dictation */}
+        {/* Real-time Voice Translator Bubble */}
         {voiceControlEnabled && (
-          <div className="bg-white border border-[#E5E5EA] rounded-[22px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.03)] mb-3 flex flex-col gap-3">
+          <div className="w-full max-w-md bg-white border border-[#E5E5EA] rounded-[22px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.03)] mb-4 flex flex-col gap-3 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex gap-0.5 items-center justify-center">
@@ -758,10 +766,14 @@ export default function App() {
                 </span>
               </div>
               <button
-                onClick={() => setShowVoiceGuide(!showVoiceGuide)}
+                onClick={() => {
+                  setIsSettingsOpen(true);
+                  setActiveTab("presets");
+                  setShowVoiceGuide(true);
+                }}
                 className="text-[11px] font-bold text-[#007AFF] hover:underline"
               >
-                {showVoiceGuide ? "收起口令指南" : "查看全部口令"}
+                口令字典
               </button>
             </div>
 
@@ -775,7 +787,7 @@ export default function App() {
                       刚才听到: <strong className="text-[#007AFF] font-bold">&quot;{lastRecognizedCommand}&quot;</strong>
                     </>
                   ) : (
-                    <span className="text-[#8E8E93] italic">随时说 “准备好了” 或 “开始” </span>
+                    <span className="text-[#8E8E93] italic">说出 “开始” 或 “暂停” 或 “下一组” 试试</span>
                   )}
                 </span>
               </div>
@@ -785,89 +797,28 @@ export default function App() {
                 {recognitionStatus === "listening" ? "在线" : "就绪"}
               </span>
             </div>
-
-            {/* Direct voice simulation testing tray (Incredibly useful for test validations) */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[#F2F2F7]">
-              <span className="text-[10px] font-bold text-[#8E8E93] mr-1">快捷测试：</span>
-              <button
-                onClick={() => simulateCommand("准备好了")}
-                className="px-2 py-1 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] text-[10px] font-bold rounded-lg transition-colors border border-[#E5E5EA]"
-              >
-                模拟: &quot;准备好了&quot;
-              </button>
-              <button
-                onClick={() => simulateCommand("开始")}
-                className="px-2 py-1 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] text-[10px] font-bold rounded-lg transition-colors border border-[#E5E5EA]"
-              >
-                模拟: &quot;开始&quot;
-              </button>
-              <button
-                onClick={() => simulateCommand("暂停")}
-                className="px-2 py-1 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] text-[10px] font-bold rounded-lg transition-colors border border-[#E5E5EA]"
-              >
-                模拟: &quot;暂停&quot;
-              </button>
-              <button
-                onClick={() => simulateCommand("下一组")}
-                className="px-2 py-1 bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#1C1C1E] text-[10px] font-bold rounded-lg transition-colors border border-[#E5E5EA]"
-              >
-                模拟: &quot;下一组&quot;
-              </button>
-            </div>
-
-            {/* Detailed Voice Commands Quick Guide */}
-            {showVoiceGuide && (
-              <div className="mt-1 bg-[#F2F2F7] rounded-[16px] p-3.5 border border-[#E5E5EA] text-xs">
-                <div className="font-bold text-[#1C1C1E] mb-2 flex items-center gap-1">
-                  <Sparkles className="h-3.5 w-3.5 text-[#FFD60A] fill-[#FFD60A]" />
-                  口令字典清单
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="bg-white p-2 rounded-xl border border-[#E5E5EA]">
-                    <span className="font-bold text-[#FF9500] block mb-0.5">1. 状态准备</span>
-                    <span className="text-[#8E8E93]">“准备好了” / “准备”</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-[#E5E5EA]">
-                    <span className="font-bold text-[#34C759] block mb-0.5">2. 开启运行</span>
-                    <span className="text-[#8E8E93]">“开始” / “走起” / “Go”</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-[#E5E5EA]">
-                    <span className="font-bold text-[#FF3B30] block mb-0.5">3. 紧急挂起</span>
-                    <span className="text-[#8E8E93]">“暂停” / “等一下” / “停”</span>
-                  </div>
-                  <div className="bg-white p-2 rounded-xl border border-[#E5E5EA]">
-                    <span className="font-bold text-[#007AFF] block mb-0.5">4. 提前跨组</span>
-                    <span className="text-[#8E8E93]">“下一组” / “搞定” / “跳过”</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
-      </div>
 
-      {/* 3. MAIN WORKOUT CONTAINER */}
-      <main className="w-full max-w-4xl px-5 flex-1 flex flex-col lg:flex-row gap-6 items-center lg:items-stretch justify-center py-4">
-        
-        {/* LEFT COMPONENT: INTUITIVE CIRCULAR iOS TIMER STAGE */}
-        <div className="flex-1 w-full flex flex-col justify-center items-center">
-          <div className="w-full max-w-md bg-white border border-[#E5E5EA]/60 rounded-[32px] p-6 sm:p-8 flex flex-col items-center justify-center shadow-[0_8px_32px_rgba(0,0,0,0.03)] relative overflow-hidden" id="apple-timer-card">
+        {/* 3. MAIN WORKOUT CENTRAL STAGE */}
+        <div className="w-full max-w-md flex flex-col justify-center items-center py-2" id="halo-timer-stage">
+          <div className="w-full bg-white border border-[#E5E5EA]/60 rounded-[36px] p-7 sm:p-9 flex flex-col items-center justify-center shadow-[0_12px_40px_rgba(0,0,0,0.04)] relative overflow-hidden" id="apple-timer-card">
             
             {/* Soft Ambient Radial Background mapping */}
             <div
-              className="absolute top-0 left-0 right-0 h-40 opacity-[0.06] transition-all duration-500 pointer-events-none"
+              className="absolute top-0 left-0 right-0 h-44 opacity-[0.06] transition-all duration-500 pointer-events-none"
               style={{ backgroundImage: `linear-gradient(to bottom, ${appleStyle.themeTint}, transparent)` }}
             />
 
             {/* Apple Styled Mini Header on card */}
             <div className="w-full flex justify-between items-center mb-6">
-              <span className="text-[11px] font-bold text-[#8E8E93] tracking-wider uppercase">
+              <span className="text-xs font-extrabold text-[#8E8E93] tracking-widest uppercase">
                 {selectedPreset}
               </span>
               
               <div className="flex gap-1.5">
                 {currentMode !== "idle" && (
-                  <span className={`text-[10px] font-bold tracking-tight px-2.5 py-1 rounded-full ${appleStyle.badgeColor} shadow-sm transition-all duration-300`}>
+                  <span className={`text-[10px] font-bold tracking-widest px-3 py-1 rounded-full ${appleStyle.badgeColor} shadow-sm transition-all duration-300 uppercase`}>
                     {appleStyle.labelText}
                   </span>
                 )}
@@ -877,39 +828,44 @@ export default function App() {
             {/* Active set visual info */}
             <div className="text-center mb-2">
               {currentMode === "idle" ? (
-                <span className="text-xs font-semibold text-[#8E8E93] uppercase tracking-widest">
-                  准备妥当，即可开始
+                <span className="text-xs font-bold text-[#8E8E93] uppercase tracking-widest">
+                  开启全新自律循环
                 </span>
               ) : currentMode === "completed" ? (
                 <div className="flex flex-col items-center gap-1">
-                  <Award className="h-9 w-9 text-[#FF2D55] animate-bounce" />
-                  <span className="text-sm font-extrabold text-[#FF2D55] tracking-tight">运动圆满搞定！</span>
+                  <span className="text-xs font-bold text-[#FF2D55] uppercase tracking-widest flex items-center gap-1">
+                    <Award className="h-4 w-4 animate-bounce" />
+                    恭喜，本次循环已完美通关！
+                  </span>
                 </div>
               ) : (
-                <div className="text-xs font-bold text-[#8E8E93] uppercase tracking-widest">
-                  第 <span className="text-3xl font-black text-[#1C1C1E] font-mono px-1.5 align-middle">{currentSet}</span> / {totalSets} 组
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className="text-xs font-black text-[#1C1C1E] bg-[#F2F2F7] px-3 py-1 rounded-full border border-[#E5E5EA]/40">
+                    第 {currentSet} 组 / 共 {totalSets} 组
+                  </span>
                 </div>
               )}
             </div>
 
-            {/* APPLE STYLE MINIMALIST CIRCLE INDICATOR */}
-            <div className="relative my-4 flex items-center justify-center">
-              <svg className="w-56 h-56 sm:w-64 sm:h-64 transform -rotate-90">
-                {/* Thin, pristine tracking background ring */}
+            {/* Main Interactive Apple Timer Ring Canvas */}
+            <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center my-4" id="ring-container">
+              
+              {/* Outer static grey ring track */}
+              <svg className="absolute w-full h-full transform -rotate-90">
                 <circle
-                  cx="112"
-                  cy="112"
+                  cx="128"
+                  cy="128"
                   r={strokeRadius}
-                  className="stroke-[#E5E5EA] fill-transparent"
-                  strokeWidth="4"
+                  className="stroke-[#E5E5EA]/40 fill-transparent"
+                  strokeWidth="6"
                   style={{ cx: "50%", cy: "50%" }}
                 />
                 
-                {/* Responsive dynamic colored ring */}
-                {currentMode !== "idle" && currentMode !== "completed" && (
+                {/* Active Dynamic Progress Ring */}
+                {isTimerRunning && (
                   <circle
-                    cx="112"
-                    cy="112"
+                    cx="128"
+                    cy="128"
                     r={strokeRadius}
                     className={`fill-transparent ${appleStyle.ringColor} transition-all duration-300`}
                     strokeWidth="6"
@@ -925,21 +881,21 @@ export default function App() {
               <div className="absolute flex flex-col items-center justify-center text-center">
                 {currentMode === "idle" ? (
                   <div className="flex flex-col items-center">
-                    <span className="text-5xl font-black text-[#1C1C1E] tracking-tighter">就绪</span>
-                    <span className="text-[10px] text-[#8E8E93] mt-2 font-bold tracking-wider uppercase">READY TO GO</span>
+                    <span className="text-6xl font-black text-[#1C1C1E] tracking-tighter">Halo</span>
+                    <span className="text-[10px] text-[#8E8E93] mt-2 font-bold tracking-wider uppercase">READY FOR ACTION</span>
                   </div>
                 ) : currentMode === "completed" ? (
-                  <div className="flex flex-col items-center px-4">
-                    <span className="text-2xl font-black text-[#FF2D55]">完成</span>
-                    <span className="text-[10px] text-[#8E8E93] mt-1 font-bold tracking-wider uppercase">COMPLETED</span>
+                  <div className="flex flex-col items-center px-4 animate-pulse">
+                    <span className="text-3xl font-black text-[#34C759]">OVER</span>
+                    <span className="text-[10px] text-[#8E8E93] mt-1.5 font-bold tracking-wider uppercase">ALL SETS DONE</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
                     {/* iOS Mono Digit display to avoid width jitter */}
-                    <span className="text-6xl sm:text-7xl font-extrabold tracking-tighter text-[#1C1C1E] font-mono">
+                    <span className="text-7xl sm:text-8xl font-extrabold tracking-tighter text-[#1C1C1E] font-mono">
                       {timeLeft}
                     </span>
-                    <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-widest mt-2">
+                    <span className="text-[11px] font-bold text-[#8E8E93] uppercase tracking-widest mt-2">
                       {currentMode === "work" ? "SEC WORK" : currentMode === "rest" ? "SEC REST" : "SEC PREP"}
                     </span>
                   </div>
@@ -948,23 +904,23 @@ export default function App() {
             </div>
 
             {/* Apple Stat Display Grid */}
-            <div className="w-full grid grid-cols-2 gap-4 border-t border-[#F2F2F7] pt-4 mt-2">
+            <div className="w-full grid grid-cols-2 gap-4 border-t border-[#F2F2F7] pt-5 mt-3">
               <div className="text-center">
                 <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider block mb-0.5">累计总用时</span>
-                <span className="text-lg font-bold text-[#1C1C1E] font-mono" id="apple-total-duration">
+                <span className="text-xl font-black text-[#1C1C1E] font-mono" id="apple-total-duration">
                   {formatTime(sessionTotalTime)}
                 </span>
               </div>
               <div className="text-center border-l border-[#F2F2F7]">
                 <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider block mb-0.5">计划总组数</span>
-                <span className="text-lg font-bold text-[#1C1C1E]" id="apple-total-sets">
+                <span className="text-xl font-black text-[#1C1C1E]" id="apple-total-sets">
                   {totalSets} 组
                 </span>
               </div>
             </div>
 
             {/* iOS SYMMETRIC ACTION CONTROL TRADITIONAL TRAY */}
-            <div className="w-full flex items-center justify-center gap-4 mt-7">
+            <div className="w-full flex items-center justify-center gap-4 mt-8">
               {/* Reset Stepper Button */}
               <button
                 onClick={triggerReset}
@@ -1024,193 +980,239 @@ export default function App() {
           </div>
         </div>
 
-        {/* RIGHT COMPONENT: iOS CONFIGURATION CARD & PRESETS */}
-        <div className="flex-1 w-full max-w-md flex flex-col gap-5 justify-between">
-          
-          <div className="bg-white border border-[#E5E5EA]/60 rounded-[32px] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.03)] flex flex-col">
-            
-            {/* Apple Styled Segmented Tab Switcher */}
-            <div className="bg-[#F2F2F7] p-1 rounded-xl flex items-center justify-between mb-5 relative">
-              <button
-                onClick={() => {
-                  setShowHistory(false);
-                  setActiveTab("presets");
-                }}
-                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all ${
-                  !showHistory && activeTab === "presets"
-                    ? "bg-white text-[#1C1C1E] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                    : "text-[#8E8E93] hover:text-[#1C1C1E]"
-                }`}
-                id="apple-tab-presets"
-              >
-                内置训练
-              </button>
-              
-              <button
-                onClick={() => {
-                  setShowHistory(false);
-                  setActiveTab("custom");
-                }}
-                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all ${
-                  !showHistory && activeTab === "custom"
-                    ? "bg-white text-[#1C1C1E] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                    : "text-[#8E8E93] hover:text-[#1C1C1E]"
-                }`}
-                id="apple-tab-custom"
-              >
-                自定义
-              </button>
+      </div>
 
+      {/* 4. iOS SLIDE-OVER BOTTOM SHEET / MODAL FOR CONFIGURATION & DATA */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          
+          {/* Backdrop Blur Overlay */}
+          <div 
+            className="fixed inset-0 bg-black/45 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setIsSettingsOpen(false)}
+          />
+
+          {/* Bottom Sheet Card */}
+          <div 
+            className="relative w-full max-w-xl bg-white rounded-t-[32px] shadow-[0_-12px_40px_rgba(0,0,0,0.12)] border-t border-[#E5E5EA] flex flex-col max-h-[88vh] z-50 overflow-hidden"
+            id="halo-configuration-sheet"
+          >
+            {/* Sheet Handle Accent */}
+            <div className="w-12 h-1.5 bg-[#E5E5EA] rounded-full mx-auto my-3 shrink-0" />
+
+            {/* Header block with close */}
+            <div className="px-6 pb-4 flex items-center justify-between border-b border-[#F2F2F7]">
+              <div>
+                <h3 className="text-lg font-black text-[#1C1C1E]">
+                  Halo! 参数与自律轨迹
+                </h3>
+                <p className="text-[11px] text-[#8E8E93] mt-0.5 font-medium">
+                  个性化定制您的高强度锻炼与语音指令方案
+                </p>
+              </div>
               <button
-                onClick={() => {
-                  setShowHistory(true);
-                  setActiveTab("history");
-                }}
-                className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
-                  showHistory
-                    ? "bg-white text-[#1C1C1E] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
-                    : "text-[#8E8E93] hover:text-[#1C1C1E]"
-                }`}
-                id="apple-tab-history"
+                onClick={() => setIsSettingsOpen(false)}
+                className="h-9 w-9 rounded-full bg-[#F2F2F7] hover:bg-[#E5E5EA] text-[#8E8E93] hover:text-[#1C1C1E] flex items-center justify-center transition-colors"
               >
-                <History className="h-3 w-3" />
-                历史
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* TAB CONTENTS */}
-            {!showHistory ? (
-              activeTab === "presets" ? (
-                /* iOS STYLE PRESETS CAROUSEL LIST */
+            {/* Apple Styled Segmented Tab Switcher */}
+            <div className="px-6 py-4 bg-white shrink-0">
+              <div className="bg-[#F2F2F7] p-1 rounded-xl flex items-center justify-between relative">
+                <button
+                  onClick={() => {
+                    setShowHistory(false);
+                    setActiveTab("presets");
+                  }}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all ${
+                    !showHistory && activeTab === "presets"
+                      ? "bg-white text-[#1C1C1E] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                      : "text-[#8E8E93] hover:text-[#1C1C1E]"
+                  }`}
+                  id="apple-tab-presets"
+                >
+                  内置预设
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setShowHistory(false);
+                    setActiveTab("custom");
+                  }}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all ${
+                    !showHistory && activeTab === "custom"
+                      ? "bg-white text-[#1C1C1E] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                      : "text-[#8E8E93] hover:text-[#1C1C1E]"
+                  }`}
+                  id="apple-tab-custom"
+                >
+                  高级自定义
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowHistory(true);
+                    setActiveTab("history");
+                  }}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
+                    showHistory
+                      ? "bg-white text-[#1C1C1E] shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                      : "text-[#8E8E93] hover:text-[#1C1C1E]"
+                  }`}
+                  id="apple-tab-history"
+                >
+                  <History className="h-3.5 w-3.5" />
+                  自律历史
+                </button>
+              </div>
+            </div>
+
+            {/* Inner Content Area - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
+              
+              {/* Presets Grid */}
+              {!showHistory && activeTab === "presets" && (
                 <div className="space-y-3" id="apple-presets-container">
                   <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider block">
-                    点击直接载入经典配置：
+                    选择一套适合您的经典运动节奏：
                   </span>
-                  <div className="space-y-2.5 max-h-[310px] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
                     {PRESETS.map((preset) => (
                       <button
                         key={preset.name}
-                        onClick={() => applyPreset(preset)}
-                        className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 flex items-center justify-between group ${
+                        onClick={() => {
+                          applyPreset(preset);
+                          setIsSettingsOpen(false); // Close modal on preset load
+                        }}
+                        className={`text-left p-4 rounded-2xl border transition-all duration-200 flex items-center justify-between group ${
                           selectedPreset === preset.name
                             ? "bg-[#007AFF]/5 border-[#007AFF]/25 shadow-sm"
                             : "bg-white border-[#E5E5EA]/70 hover:bg-[#F2F2F7]"
                         }`}
                       >
                         <div className="flex-1 min-w-0 pr-2">
-                          <div className="font-bold text-sm text-[#1C1C1E] group-hover:text-[#007AFF] transition-colors">
+                          <div className="font-extrabold text-sm text-[#1C1C1E] group-hover:text-[#007AFF] transition-colors">
                             {preset.name}
                           </div>
-                          <div className="text-[11px] text-[#8E8E93] mt-1 leading-normal line-clamp-1">
+                          <div className="text-[11px] text-[#8E8E93] mt-1 leading-normal line-clamp-2">
                             {preset.description}
                           </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-[10px] font-bold bg-[#F2F2F7] text-[#1C1C1E] px-2 py-0.5 rounded-md">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                            <span className="text-[9px] font-extrabold bg-[#F2F2F7] text-[#1C1C1E] px-1.5 py-0.5 rounded">
                               动作: {preset.workDuration}s
                             </span>
-                            <span className="text-[10px] font-bold bg-[#F2F2F7] text-[#1C1C1E] px-2 py-0.5 rounded-md">
+                            <span className="text-[9px] font-extrabold bg-[#F2F2F7] text-[#1C1C1E] px-1.5 py-0.5 rounded">
                               休息: {preset.restDuration}s
                             </span>
-                            <span className="text-[10px] font-bold bg-[#007AFF]/10 text-[#007AFF] px-2 py-0.5 rounded-md">
-                              循环: {preset.totalSets}组
+                            <span className="text-[9px] font-extrabold bg-[#007AFF]/10 text-[#007AFF] px-1.5 py-0.5 rounded">
+                              {preset.totalSets}组
                             </span>
                           </div>
                         </div>
-                        <ChevronRight className="h-4.5 w-4.5 text-[#C7C7CC] group-hover:text-[#007AFF] transition-all" />
+                        <ChevronRight className="h-4.5 w-4.5 text-[#C7C7CC] group-hover:text-[#007AFF] transition-all shrink-0" />
                       </button>
                     ))}
                   </div>
                 </div>
-              ) : (
-                /* iOS CUSTOM FORM WORKOUT STEPPERS */
-                <div className="space-y-4" id="apple-steppers-container">
-                  {/* WORK TIMER SECTION */}
+              )}
+
+              {/* Custom sliders adjusters */}
+              {!showHistory && activeTab === "custom" && (
+                <div className="space-y-5" id="apple-custom-panel">
+                  {/* Card 1: Work duration slider */}
                   <div className="bg-[#F2F2F7]/50 rounded-2xl p-4 border border-[#E5E5EA]/40">
-                    <div className="flex justify-between items-center mb-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider block">TRAINING</span>
-                        <label className="text-xs font-bold text-[#1C1C1E]">单组运动时间</label>
-                      </div>
-                      <span className="text-base font-extrabold text-[#007AFF] font-mono">{workDuration}秒</span>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs font-bold text-[#1C1C1E] tracking-tight">
+                        单组运动时长 (Work)
+                      </span>
+                      <span className="text-sm font-extrabold text-[#007AFF] font-mono">
+                        {workDuration} 秒
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleCustomDurationChange("work", false)}
-                        className="h-10 w-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] hover:bg-[#F2F2F7] active:scale-90 shadow-sm"
+                        className="h-8 w-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center font-bold text-[#1C1C1E] active:scale-95 transition-all shadow-sm"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
                       <input
                         type="range"
                         min="5"
-                        max="300"
+                        max="180"
                         step="5"
                         value={workDuration}
                         onChange={(e) => {
                           setSelectedPreset("自定义");
                           setWorkDuration(parseInt(e.target.value));
                         }}
-                        className="flex-1 h-1 bg-[#007AFF]/20 rounded-lg appearance-none cursor-pointer accent-[#007AFF]"
+                        className="flex-1 accent-[#007AFF] h-1.5 rounded-lg appearance-none bg-[#E5E5EA] cursor-pointer"
+                        id="work-duration-slider"
                       />
                       <button
                         onClick={() => handleCustomDurationChange("work", true)}
-                        className="h-10 w-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] hover:bg-[#F2F2F7] active:scale-90 shadow-sm"
+                        className="h-8 w-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center font-bold text-[#1C1C1E] active:scale-95 transition-all shadow-sm"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
 
-                  {/* REST TIMER SECTION */}
+                  {/* Card 2: Rest duration slider */}
                   <div className="bg-[#F2F2F7]/50 rounded-2xl p-4 border border-[#E5E5EA]/40">
-                    <div className="flex justify-between items-center mb-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider block">RECOVERY</span>
-                        <label className="text-xs font-bold text-[#1C1C1E]">每组休息时间</label>
-                      </div>
-                      <span className="text-base font-extrabold text-[#34C759] font-mono">{restDuration}秒</span>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs font-bold text-[#1C1C1E] tracking-tight">
+                        单组休息时长 (Rest)
+                      </span>
+                      <span className="text-sm font-extrabold text-[#34C759] font-mono">
+                        {restDuration} 秒
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleCustomDurationChange("rest", false)}
-                        className="h-10 w-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] hover:bg-[#F2F2F7] active:scale-90 shadow-sm"
+                        className="h-8 w-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center font-bold text-[#1C1C1E] active:scale-95 transition-all shadow-sm"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
                       <input
                         type="range"
                         min="5"
-                        max="300"
+                        max="180"
                         step="5"
                         value={restDuration}
                         onChange={(e) => {
                           setSelectedPreset("自定义");
                           setRestDuration(parseInt(e.target.value));
                         }}
-                        className="flex-1 h-1 bg-[#34C759]/20 rounded-lg appearance-none cursor-pointer accent-[#34C759]"
+                        className="flex-1 accent-[#34C759] h-1.5 rounded-lg appearance-none bg-[#E5E5EA] cursor-pointer"
+                        id="rest-duration-slider"
                       />
                       <button
                         onClick={() => handleCustomDurationChange("rest", true)}
-                        className="h-10 w-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] hover:bg-[#F2F2F7] active:scale-90 shadow-sm"
+                        className="h-8 w-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center font-bold text-[#1C1C1E] active:scale-95 transition-all shadow-sm"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
 
-                  {/* REPETITION SETS SECTION */}
+                  {/* Card 3: Total Sets slider */}
                   <div className="bg-[#F2F2F7]/50 rounded-2xl p-4 border border-[#E5E5EA]/40">
-                    <div className="flex justify-between items-center mb-2">
-                      <div>
-                        <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider block">INTERVAL SETS</span>
-                        <label className="text-xs font-bold text-[#1C1C1E]">计划总循环组数</label>
-                      </div>
-                      <span className="text-base font-extrabold text-[#FF9500] font-mono">{totalSets}组</span>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-xs font-bold text-[#1C1C1E] tracking-tight">
+                        计划总轮数组数 (Sets)
+                      </span>
+                      <span className="text-sm font-extrabold text-[#FF9500] font-mono">
+                        {totalSets} 组
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleCustomDurationChange("sets", false)}
-                        className="h-10 w-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] hover:bg-[#F2F2F7] active:scale-90 shadow-sm"
+                        className="h-8 w-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center font-bold text-[#1C1C1E] active:scale-95 transition-all shadow-sm"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
@@ -1224,102 +1226,180 @@ export default function App() {
                           setSelectedPreset("自定义");
                           setTotalSets(parseInt(e.target.value));
                         }}
-                        className="flex-1 h-1 bg-[#FF9500]/20 rounded-lg appearance-none cursor-pointer accent-[#FF9500]"
+                        className="flex-1 accent-[#FF9500] h-1.5 rounded-lg appearance-none bg-[#E5E5EA] cursor-pointer"
+                        id="sets-slider"
                       />
                       <button
                         onClick={() => handleCustomDurationChange("sets", true)}
-                        className="h-10 w-10 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#1C1C1E] hover:bg-[#F2F2F7] active:scale-90 shadow-sm"
+                        className="h-8 w-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center font-bold text-[#1C1C1E] active:scale-95 transition-all shadow-sm"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
                 </div>
-              )
-            ) : (
-              /* HISTORY ARCHIVES DISPLAY LIST */
-              <div className="space-y-3 max-h-[330px] overflow-y-auto pr-1" id="apple-history-container">
-                {historyLogs.length === 0 ? (
-                  <div className="text-center py-12 flex flex-col items-center justify-center text-[#8E8E93]">
-                    <History className="h-11 w-11 text-[#D1D1D6] stroke-1 mb-2" />
-                    <p className="text-xs font-semibold">暂无任何锻炼日志</p>
-                    <p className="text-[10px] text-[#AEAEB2] mt-1">今天就开始属于你的第一次挑战吧！</p>
+              )}
+
+              {/* History workout logs */}
+              {showHistory && (
+                <div className="space-y-3" id="apple-history-container">
+                  {historyLogs.length === 0 ? (
+                    <div className="text-center py-10 bg-[#F2F2F7]/30 border border-[#E5E5EA]/50 rounded-2xl">
+                      <Award className="h-8 w-8 text-[#AEAEB2] mx-auto mb-2 opacity-50" />
+                      <p className="text-xs text-[#8E8E93] font-medium">还没有任何锻炼历史记录哦</p>
+                      <p className="text-[10px] text-[#AEAEB2] mt-1">完成一次完整的训练轮数后，成果将记入这里！</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">
+                          已记录的自律日志
+                        </span>
+                        <button
+                          onClick={clearAllLogs}
+                          className="text-xs text-[#FF3B30] hover:underline flex items-center gap-1 font-bold"
+                          id="apple-clear-logs"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          清空记录
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        {historyLogs.map((log) => (
+                          <div
+                            key={log.id}
+                            className="bg-[#F2F2F7]/40 border border-[#E5E5EA]/50 rounded-xl p-3 flex items-center justify-between gap-3 hover:bg-[#F2F2F7]/80 transition-colors"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold text-xs text-[#1C1C1E] truncate">{log.presetName}</span>
+                                <span className="text-[9px] font-bold bg-[#FF2D55]/10 text-[#FF2D55] px-1.5 py-0.5 rounded-full">
+                                  {log.setsCompleted}组完成
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 text-[10px] text-[#8E8E93] mt-1 font-mono">
+                                <span className="flex items-center gap-0.5">
+                                  <Clock className="h-3 w-3" />
+                                  {formatMinutesAndSeconds(log.totalDuration)}
+                                </span>
+                                <span>•</span>
+                                <span>{log.date}</span>
+                              </div>
+                            </div>
+                            
+                            <button
+                              onClick={(e) => deleteLog(log.id, e)}
+                              className="h-8 w-8 rounded-full hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] text-[#AEAEB2] flex items-center justify-center transition-colors shrink-0"
+                              title="删除单条"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Speech Reference Panel */}
+              <div className="border-t border-[#F2F2F7] pt-5">
+                <div className="bg-[#1C1C1E] text-white rounded-[20px] p-4 shadow-[0_4px_16px_rgba(0,0,0,0.06)]">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#30B0C7] shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-xs text-[#E5E5EA] tracking-tight">
+                        智能免提语音控制指南
+                      </h4>
+                      <p className="text-[11px] text-[#AEAEB2] mt-1 leading-relaxed">
+                        在您大汗淋漓、双手不便触摸屏幕时，开启右上方「语音控制」后，可直接说出以下口令对 Halo! 计时器进行隔空操作：
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-bold text-[#8E8E93] uppercase tracking-wider">
-                        自律轨迹
-                      </span>
+
+                  {/* Commands dictionary */}
+                  <div className="grid grid-cols-2 gap-2 mt-3.5 text-[10px]">
+                    <div className="bg-white/10 p-2 rounded-xl">
+                      <span className="font-bold text-[#FF9500] block mb-0.5">状态准备</span>
+                      <span className="text-[#AEAEB2]">“准备好了” / “准备”</span>
+                    </div>
+                    <div className="bg-white/10 p-2 rounded-xl">
+                      <span className="font-bold text-[#34C759] block mb-0.5">开启运行</span>
+                      <span className="text-[#AEAEB2]">“开始” / “走起”</span>
+                    </div>
+                    <div className="bg-[#FF3B30]/20 p-2 rounded-xl">
+                      <span className="font-bold text-[#FF3B30] block mb-0.5">紧急挂起</span>
+                      <span className="text-[#AEAEB2]">“暂停” / “等一下”</span>
+                    </div>
+                    <div className="bg-[#007AFF]/20 p-2 rounded-xl">
+                      <span className="font-bold text-[#007AFF] block mb-0.5">提前跨组</span>
+                      <span className="text-[#AEAEB2]">“下一组” / “跳过”</span>
+                    </div>
+                  </div>
+
+                  {/* Manual trigger panel within setting for swift validation */}
+                  <div className="mt-4 pt-3.5 border-t border-white/10">
+                    <span className="text-[10px] font-bold text-[#AEAEB2] block mb-2">
+                      语音模拟调试按钮（模拟听筒接收）：
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
                       <button
-                        onClick={clearAllLogs}
-                        className="text-xs text-[#FF3B30] hover:underline flex items-center gap-1 font-bold"
-                        id="apple-clear-logs"
+                        onClick={() => {
+                          simulateCommand("准备好了");
+                          setIsSettingsOpen(false); // Close settings for swift feedback
+                        }}
+                        className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold rounded-lg transition-colors"
                       >
-                        <Trash2 className="h-3 w-3 animate-pulse" />
-                        清空记录
+                        模拟: &quot;准备好了&quot;
+                      </button>
+                      <button
+                        onClick={() => {
+                          simulateCommand("开始");
+                          setIsSettingsOpen(false);
+                        }}
+                        className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold rounded-lg transition-colors"
+                      >
+                        模拟: &quot;开始&quot;
+                      </button>
+                      <button
+                        onClick={() => {
+                          simulateCommand("暂停");
+                        }}
+                        className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold rounded-lg transition-colors"
+                      >
+                        模拟: &quot;暂停&quot;
+                      </button>
+                      <button
+                        onClick={() => {
+                          simulateCommand("下一组");
+                        }}
+                        className="px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold rounded-lg transition-colors"
+                      >
+                        模拟: &quot;下一组&quot;
                       </button>
                     </div>
-                    <div className="space-y-2">
-                      {historyLogs.map((log) => (
-                        <div
-                          key={log.id}
-                          className="bg-[#F2F2F7]/40 border border-[#E5E5EA]/50 rounded-xl p-3 flex items-center justify-between gap-3 hover:bg-[#F2F2F7]/80 transition-colors"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-xs text-[#1C1C1E] truncate">{log.presetName}</span>
-                              <span className="text-[9px] font-bold bg-[#FF2D55]/10 text-[#FF2D55] px-1.5 py-0.5 rounded-full">
-                                {log.setsCompleted}组完成
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-[10px] text-[#8E8E93] mt-1 font-mono">
-                              <span className="flex items-center gap-0.5">
-                                <Clock className="h-3 w-3" />
-                                {formatMinutesAndSeconds(log.totalDuration)}
-                              </span>
-                              <span>•</span>
-                              <span>{log.date}</span>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={(e) => deleteLog(log.id, e)}
-                            className="h-8 w-8 rounded-full hover:bg-[#FF3B30]/10 hover:text-[#FF3B30] text-[#AEAEB2] flex items-center justify-center transition-colors shrink-0"
-                            title="删除单条"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* MOTIVATIONAL METRIC TRAY */}
-          <div className="bg-[#1C1C1E] text-white rounded-[28px] p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.06)] flex items-start gap-3.5">
-            <div className="bg-white/10 p-2.5 rounded-xl text-[#007AFF] shrink-0 mt-0.5">
-              <CheckCircle2 className="h-5.5 w-5.5 text-[#30B0C7]" />
             </div>
-            <div>
-              <h4 className="font-bold text-xs text-[#E5E5EA] tracking-tight">
-                HIIT & 力量训练间歇小贴士
-              </h4>
-              <p className="text-[11px] text-[#AEAEB2] mt-1.5 leading-relaxed">
-                研究表明：当保持高度的运动与休息循环节律时，心肺耐力激活最充分。双手被占领时，请不要害羞，直接说“下一组”或“暂停”来掌控您的每一次自律突破！
-              </p>
+
+            {/* Bottom Button Panel */}
+            <div className="px-6 py-4 bg-[#F2F2F7] border-t border-[#E5E5EA] flex justify-end shrink-0">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="w-full sm:w-28 py-2.5 rounded-xl bg-[#007AFF] hover:bg-[#0072E3] text-white text-xs font-black transition-all shadow-[0_3px_8px_rgba(0,122,255,0.2)]"
+              >
+                开始训练
+              </button>
             </div>
           </div>
-
         </div>
-      </main>
+      )}
 
-      {/* 4. iOS COMPACT FOOTER */}
+      {/* 5. iOS COMPACT FOOTER */}
       <footer className="w-full text-center py-5 border-t border-[#E5E5EA]/60 text-[#8E8E93] text-[10px] font-bold tracking-wider uppercase bg-[#F2F2F7]">
-        简约锻炼计时器 • 设计源自加州苹果美学 • 2026
+        Halo! • 设计源自加州苹果美学 • 2026
       </footer>
     </div>
   );

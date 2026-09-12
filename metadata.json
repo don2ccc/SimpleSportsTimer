@@ -1,10 +1,5 @@
 {
-  "name": "Minimalist Workout Timer",
-  "description": "一款极致简约且实用的锻炼和休息计时器。支持自动休息间隔、总时长/组数统计、语音合成播报（TTS）、倒计时声音提醒，以及免手操作的智能语音控制（支持“开始”、“暂停”、“下一组”等语音指令）。",
-  "requestFramePermissions": [
-    "microphone"
-  ],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
+  "name": "Halo!",
+  "description": "一款极致简约、科技感与艺术感并存的苹果美学级锻炼计时器。主界面仅聚焦纯净呼吸圆环与核心数字，所有参数配置、预设清单、历史记录均收拢于轻量弹窗，支持全功能智能语音免手操作与精准TTS实时播报。",
+  "Overwrite":true,
+  "TargetFile":
