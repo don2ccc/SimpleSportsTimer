@@ -637,21 +637,21 @@ export default function App() {
     <div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-between font-sans text-[#1C1C1E] antialiased">
       
       {/* 1. iOS APP BAR */}
-      <header className="w-full max-w-4xl px-5 pt-7 pb-4 flex items-center justify-between border-b border-[#E5E5EA]/70 bg-[#F2F2F7]">
-        <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-[12px] bg-[#007AFF] flex items-center justify-center text-white shadow-[0_4px_12px_rgba(0,122,255,0.3)]">
-            <Flame className="h-5.5 w-5.5" strokeWidth={2} />
+      <header className="w-full max-w-4xl px-4 sm:px-5 pt-5 sm:pt-7 pb-4 flex items-center justify-between border-b border-[#E5E5EA]/70 bg-[#F2F2F7]">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-[12px] bg-[#007AFF] flex items-center justify-center text-white shadow-[0_4px_12px_rgba(0,122,255,0.3)] shrink-0">
+            <Flame className="h-4.5 w-4.5 sm:h-5.5 sm:w-5.5" strokeWidth={2} />
           </div>
           <div>
-            <span className="text-[10px] font-bold text-[#8E8E93] tracking-widest uppercase block">VOICE HIIT TIMER</span>
-            <h1 className="text-2xl font-black text-[#1C1C1E] tracking-tight -mt-1" id="header-app-name">
+            <span className="text-[9px] font-bold text-[#8E8E93] tracking-widest uppercase hidden sm:block">VOICE HIIT TIMER</span>
+            <h1 className="text-xl sm:text-2xl font-black text-[#1C1C1E] tracking-tight sm:-mt-1" id="header-app-name">
               Halo!
             </h1>
           </div>
         </div>
 
         {/* Dynamic iOS controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Audio volume toggler */}
           <button
             onClick={() => {
@@ -659,7 +659,7 @@ export default function App() {
               setVoiceEnabled(newVal);
               speak(newVal ? "语音开启" : "");
             }}
-            className={`h-10 w-10 rounded-full flex items-center justify-center border transition-all duration-250 ${
+            className={`h-10 w-10 rounded-full flex items-center justify-center border transition-all duration-250 shrink-0 ${
               voiceEnabled
                 ? "bg-white text-[#34C759] border-[#E5E5EA] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
                 : "bg-white/50 text-[#8E8E93] border-transparent"
@@ -673,7 +673,7 @@ export default function App() {
           {/* iOS mic status controller */}
           <button
             onClick={() => setVoiceControlEnabled(!voiceControlEnabled)}
-            className={`h-10 px-3.5 rounded-full flex items-center gap-2 border transition-all duration-250 ${
+            className={`h-10 w-10 sm:w-auto sm:px-3.5 rounded-full flex items-center justify-center sm:gap-2 border transition-all duration-250 shrink-0 ${
               voiceControlEnabled
                 ? "bg-[#34C759] text-white border-[#34C759] shadow-[0_4px_12px_rgba(52,199,89,0.25)]"
                 : "bg-white text-[#1C1C1E] border-[#E5E5EA] shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
@@ -686,12 +686,12 @@ export default function App() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                 </span>
-                <span className="text-xs font-bold tracking-tight">智能指令开</span>
+                <span className="text-xs font-bold tracking-tight hidden sm:inline whitespace-nowrap">智能指令开</span>
               </>
             ) : (
               <>
-                <Mic className="h-4.5 w-4.5 text-[#007AFF]" />
-                <span className="text-xs font-semibold text-[#1C1C1E] tracking-tight">语音控制</span>
+                <Mic className="h-4.5 w-4.5 text-[#007AFF] shrink-0" />
+                <span className="text-xs font-semibold text-[#1C1C1E] tracking-tight hidden sm:inline whitespace-nowrap">语音控制</span>
               </>
             )}
           </button>
@@ -699,11 +699,11 @@ export default function App() {
           {/* Config Settings trigger button */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="h-10 px-4 rounded-full flex items-center gap-1.5 border bg-white hover:bg-[#F2F2F7] text-[#1C1C1E] border-[#E5E5EA] transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:scale-95 font-bold text-xs shrink-0"
+            className="h-10 w-10 sm:w-auto sm:px-4 rounded-full flex items-center justify-center sm:gap-1.5 border bg-white hover:bg-[#F2F2F7] text-[#1C1C1E] border-[#E5E5EA] transition-all duration-200 shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:scale-95 font-bold text-xs shrink-0"
             id="open-configuration-btn"
           >
-            <Settings className="h-4 w-4 text-[#007AFF]" />
-            <span>配置参数</span>
+            <Settings className="h-4.5 w-4.5 text-[#007AFF] shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">配置参数</span>
           </button>
         </div>
       </header>
